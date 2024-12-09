@@ -8,6 +8,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/users')]
@@ -22,13 +23,16 @@ class UserController extends AbstractController
     }
 
     #[Route('/new', name: 'user_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em): Response
+    public function new(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $passwordHasher): Response
     {
         if ($request->isMethod('POST')) {
             $user = new User();
             $user->setName($request->request->get('name'));
             $user->setEmail($request->request->get('email'));
-            $user->setPassword(password_hash('password', PASSWORD_BCRYPT));
+            // $user->setPassword(password_hash('password', PASSWORD_BCRYPT));
+            $plainPassword = $request->request->get('password');
+            $hashedPassword = $passwordHasher->hashPassword($user, $plainPassword);
+            $user->setPassword($hashedPassword);
             $user->setRoles(['ROLE_USER']);
 
             $em->persist($user);
@@ -39,7 +43,7 @@ class UserController extends AbstractController
 
         return $this->render('user/new.html.twig');
     }
-    
+
     #[Route('/{id}/edit', name: 'user_edit', methods: ['GET', 'POST'])]
     public function edit(User $user, Request $request, EntityManagerInterface $em): Response
     {
